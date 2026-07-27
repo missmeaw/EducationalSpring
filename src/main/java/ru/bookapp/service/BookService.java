@@ -18,37 +18,18 @@ public class BookService {
     @Autowired
     public BookService(BookRepository bookRepository) {
         this.bookRepository = bookRepository;
-    }
-
-    public void initializeDatabase() {
         bookRepository.initTable();
     }
 
-    public void addBook(String title, String author, int year) {
-        Book book = new Book(1L, title, author, year);
+    public void addBook(Book book) {
         bookRepository.addBook(book);
-        System.out.println("Книга успешно добавлена!");
     }
 
-    public void listBooks() {
-        List<Book> books = bookRepository.findAllBooks();
-        if (books.isEmpty()) {
-            System.out.println("Библиотека пуста.");
-        } else {
-            System.out.println("\n=== Список книг ===");
-            books.forEach(System.out::println);
-            System.out.println("Всего книг: " + books.size());
-        }
+    public List<Book> listBooks() {
+        return bookRepository.findAllBooks();
     }
 
-    public void findBooks(String searchTerm) {
-        List<Book> books = bookRepository.findBooksByTitle(searchTerm);
-        if (books.isEmpty()) {
-            System.out.println("Книги по запросу '" + searchTerm + "' не найдены.");
-        } else {
-            System.out.println("\n=== Результаты поиска по '" + searchTerm + "' ===");
-            books.forEach(System.out::println);
-            System.out.println("Найдено книг: " + books.size());
-        }
+    public List<Book> findBooks(String searchTerm) {
+        return bookRepository.findBooksByTitle(searchTerm);
     }
 }

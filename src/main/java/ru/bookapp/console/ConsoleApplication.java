@@ -2,8 +2,10 @@ package ru.bookapp.console;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import ru.bookapp.model.Book;
 import ru.bookapp.service.BookService;
 
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -23,8 +25,6 @@ public class ConsoleApplication {
     }
 
     public void run() {
-        // Инициализация базы данных
-        bookService.initializeDatabase();
 
         System.out.println("=== Добро пожаловать в систему управления библиотекой ===");
         System.out.println("Доступные команды:");
@@ -47,9 +47,17 @@ public class ConsoleApplication {
                     case "add":
                         handleAddCommand();
                         break;
-                    case "list":
-                        bookService.listBooks();
-                        break;
+                    case "list": {
+                        List<Book> books = bookService.listBooks();
+                        if (books.isEmpty()) {
+                            System.out.println("Библиотека пуста.");
+                        } else {
+                            System.out.println("\n=== Список книг ===");
+                            books.forEach(System.out::println);
+                            System.out.println("Всего книг: " + books.size());
+                        }
+                    }
+                    break;
                     case "find":
                         handleFindCommand();
                         break;
@@ -93,7 +101,8 @@ public class ConsoleApplication {
                 System.out.println("Некорректный год!");
                 return;
             }
-            bookService.addBook(title, author, year);
+            bookService.addBook(new Book(title, author, year));
+            System.out.println("Книга успешно добавлена!");
         } catch (NumberFormatException e) {
             System.out.println("Год должен быть числом!");
         }
@@ -108,6 +117,14 @@ public class ConsoleApplication {
             return;
         }
 
-        bookService.findBooks(searchTerm);
+        List<Book> books = bookService.findBooks(searchTerm);
+
+        if (books.isEmpty()) {
+            System.out.println("Книги по запросу '" + searchTerm + "' не найдены.");
+        } else {
+            System.out.println("\n=== Результаты поиска по '" + searchTerm + "' ===");
+            books.forEach(System.out::println);
+            System.out.println("Найдено книг: " + books.size());
+        }
     }
 }
