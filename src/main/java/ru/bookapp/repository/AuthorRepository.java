@@ -7,14 +7,12 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.bookapp.model.Author;
-import ru.bookapp.model.Book;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -24,23 +22,19 @@ import java.util.Optional;
 public class AuthorRepository {
 
     private final JdbcTemplate jdbcTemplate;
-    private final BookRepository bookRepository;
 
     @Autowired
-    public AuthorRepository(JdbcTemplate jdbcTemplate, BookRepository bookRepository) {
+    public AuthorRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-        this.bookRepository = bookRepository;
     }
 
     // Создание таблицы при старте
     public void initTable() {
-        String sql = """
-                CREATE TABLE IF NOT EXISTS authors (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL UNIQUE,
-                    biography TEXT
-                )
-                """;
+        String sql = "CREATE TABLE IF NOT EXISTS authors (" +
+                "id SERIAL PRIMARY KEY, " +
+                "name VARCHAR(255) NOT NULL UNIQUE, " +
+                "biography TEXT" +
+                ")";
         jdbcTemplate.execute(sql);
     }
 
@@ -49,13 +43,18 @@ public class AuthorRepository {
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"}); // Явно указываем колонку
             ps.setString(1, author.getName());
             ps.setString(2, author.getBiography());
             return ps;
         }, keyHolder);
 
-        return Objects.requireNonNull(keyHolder.getKey()).longValue();
+        // Получаем ключ
+        Map<String, Object> keys = keyHolder.getKeys();
+        if (keys == null || keys.isEmpty()) {
+            throw new RuntimeException("Не удалось получить ID автора");
+        }
+        return ((Number) keys.get("id")).longValue();
     }
 
     public Optional<Author> findAuthorById(Long id) {
@@ -66,12 +65,7 @@ public class AuthorRepository {
             return Optional.empty();
         }
 
-        Author author = authors.getFirst();
-        // Загружаем книги автора
-        List<Book> books = bookRepository.findBooksByAuthorId(id);
-        author.setBooks(books);
-
-        return Optional.of(author);
+        return Optional.of(authors.getFirst());
     }
 
     public List<Author> findAllAuthors() {
@@ -80,19 +74,14 @@ public class AuthorRepository {
     }
 
     public void deleteAuthor(Long authorId) {
-        // Проверяем, есть ли книги у автора
-        List<Book> books = bookRepository.findBooksByAuthorId(authorId);
-        if (!books.isEmpty()) {
-            throw new IllegalStateException("Нельзя удалить автора, у которого есть книги. Сначала удалите все книги автора.");
-        }
         String sql = "DELETE FROM authors WHERE id = ?";
         jdbcTemplate.update(sql, authorId);
     }
 
-    public boolean authorExists(Long authorId) {
+    public boolean authorNotExists(Long authorId) {
         String sql = "SELECT COUNT(*) FROM authors WHERE id = ?";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, authorId);
-        return count != null && count > 0;
+        return count == null || count == 0;
     }
 
     public boolean authorExistsByName(String name) {

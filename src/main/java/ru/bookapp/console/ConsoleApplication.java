@@ -38,6 +38,7 @@ public class ConsoleApplication {
         System.out.println("  add-author-with-books - Создать автора с книгами");
         System.out.println("  find-author           - Найти автора по ID");
         System.out.println("  delete-author         - Удалить автора");
+        System.out.println("  list-authors          - Показать всех авторов");
         System.out.println("  list-books            - Показать все книги");
         System.out.println("  find-books            - Найти книги по названию");
         System.out.println("  transfer-book         - Переместить книгу к другому автору");
@@ -77,6 +78,17 @@ public class ConsoleApplication {
                         }
                     }
                     break;
+                    case "list-authors": {
+                        List<Author> authors = authorService.getAllAuthors();
+                        if (authors.isEmpty()) {
+                            System.out.println("Писателей не найдено.");
+                        } else {
+                            System.out.println("\n=== Список авторов ===");
+                            authors.forEach(System.out::println);
+                            System.out.println("Всего авторов: " + authors.size());
+                        }
+                    }
+                    break;
                     case "find-books":
                         handleFindBooks();
                         break;
@@ -90,7 +102,7 @@ public class ConsoleApplication {
                     default:
                         System.out.println("Неизвестная команда: '" + input + "'");
                         System.out.println(
-                                "Доступные команды: add-book, add-author-with-books, find-author, delete-author, list-books, find-books, transfer-book, exit");
+                                "Доступные команды: add-book, add-author-with-books, find-author, delete-author, list-books, list-authors, find-books, transfer-book, exit");
                 }
             } catch (Exception e) {
                 System.out.println("Ошибка: " + e.getMessage());

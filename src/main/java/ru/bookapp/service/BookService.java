@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.bookapp.model.Book;
+import ru.bookapp.repository.AuthorRepository;
 import ru.bookapp.repository.BookRepository;
 
 import java.util.List;
@@ -15,11 +16,12 @@ import java.util.List;
 public class BookService {
 
     private final BookRepository bookRepository;
+    private final AuthorRepository authorRepository;
 
     @Autowired
-    public BookService(BookRepository bookRepository) {
+    public BookService(BookRepository bookRepository, AuthorRepository authorRepository) {
         this.bookRepository = bookRepository;
-        bookRepository.initTable();
+        this.authorRepository = authorRepository;
     }
 
     @Transactional
@@ -39,6 +41,9 @@ public class BookService {
     public void transferBook(Long bookId, Long newAuthorId) {
         if (!bookRepository.bookExists(bookId)) {
             throw new IllegalArgumentException("Книга с ID " + bookId + " не найдена");
+        }
+        if (authorRepository.authorNotExists(newAuthorId)) {
+            throw new IllegalArgumentException("Автор с ID " + newAuthorId + " не найден");
         }
         bookRepository.updateBookAuthor(bookId, newAuthorId);
     }

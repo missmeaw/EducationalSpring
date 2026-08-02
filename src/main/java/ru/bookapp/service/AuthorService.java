@@ -24,7 +24,6 @@ public class AuthorService {
     public AuthorService(AuthorRepository authorRepository, BookRepository bookRepository) {
         this.authorRepository = authorRepository;
         this.bookRepository = bookRepository;
-        authorRepository.initTable();
     }
 
     @Transactional
@@ -52,18 +51,36 @@ public class AuthorService {
     }
 
     public Optional<Author> findAuthorById(Long id) {
-        return authorRepository.findAuthorById(id);
+        Optional<Author> author = authorRepository.findAuthorById(id);
+
+        // Загружаем книги автора
+        if (author.isPresent()) {
+            List<Book> books = bookRepository.findBooksByAuthorId(id);
+            author.get().setBooks(books);
+        }
+
+        return author;
     }
 
     public void deleteAuthor(Long authorId) {
-        if (!authorRepository.authorExists(authorId)) {
+        if (authorRepository.authorNotExists(authorId)) {
             throw new IllegalArgumentException("Автор с ID " + authorId + " не найден");
+        }
+        List<Book> books = bookRepository.findBooksByAuthorId(authorId);
+        if (!books.isEmpty()) {
+            throw new IllegalStateException("Нельзя удалить автора, у которого есть книги. Сначала удалите все книги автора.");
         }
         authorRepository.deleteAuthor(authorId);
     }
 
     public List<Author> getAllAuthors() {
-        return authorRepository.findAllAuthors();
+        List<Author> authors = authorRepository.findAllAuthors();
+        for (Author author : authors) {
+            // Загружаем книги автора
+            List<Book> books = bookRepository.findBooksByAuthorId(author.getId());
+            author.setBooks(books);
+        }
+        return authors;
     }
 
     public Optional<Author> findAuthorIdByName(String authorName) {
