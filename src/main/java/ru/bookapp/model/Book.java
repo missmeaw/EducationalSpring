@@ -1,7 +1,7 @@
 package ru.bookapp.model;
 
 /**
- * todo Document type BookDto
+ * Модель данных Книга
  */
 
 
@@ -16,6 +16,19 @@ public class Book {
         this.year = year;
     }
 
+    public Book(String title, int year, Long authorId) {
+        this.title = title;
+        this.year = year;
+        this.authorId = authorId;
+    }
+
+    public Book(Long id, String title, int year, Long authorId) {
+        this.id = id;
+        this.title = title;
+        this.year = year;
+        this.authorId = authorId;
+    }
+
     public Book(Long id, String title, String author, int year) {
         this.id = id;
         this.title = title;
@@ -27,6 +40,7 @@ public class Book {
     private String title;
     private String author;
     private int year;
+    private Long authorId;
 
     // Геттеры и сеттеры
     public Long getId() {
@@ -59,6 +73,14 @@ public class Book {
 
     public void setYear(int year) {
         this.year = year;
+    }
+
+    public Long getAuthorId() {
+        return authorId;
+    }
+
+    public void setAuthorId(Long authorId) {
+        this.authorId = authorId;
     }
 
     @Override
