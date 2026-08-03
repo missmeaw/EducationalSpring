@@ -24,10 +24,10 @@ public class AuthorService {
     public AuthorService(AuthorRepository authorRepository, BookRepository bookRepository) {
         this.authorRepository = authorRepository;
         this.bookRepository = bookRepository;
+        authorRepository.initTable();
     }
 
-    @Transactional
-    public void createAuthorWithBooks(String authorName, String biography, List<Book> books) {
+    public Long createAuthor(String authorName, String biography) {
         // Проверяем, существует ли уже автор
         if (authorRepository.authorExistsByName(authorName)) {
             throw new IllegalArgumentException("Автор с именем '" + authorName + "' уже существует");
@@ -35,7 +35,13 @@ public class AuthorService {
 
         // Создаем автора
         Author author = new Author(authorName, biography);
-        Long authorId = authorRepository.addAuthor(author);
+        return authorRepository.addAuthor(author);
+
+    }
+
+    @Transactional
+    public void createAuthorWithBooks(String authorName, String biography, List<Book> books) {
+        Long authorId = createAuthor(authorName, biography);
 
         // Добавляем все книги
         for (Book book : books) {

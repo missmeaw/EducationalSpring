@@ -22,6 +22,7 @@ public class BookService {
     public BookService(BookRepository bookRepository, AuthorRepository authorRepository) {
         this.bookRepository = bookRepository;
         this.authorRepository = authorRepository;
+        bookRepository.initTable();
     }
 
     @Transactional

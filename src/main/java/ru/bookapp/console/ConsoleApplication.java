@@ -7,6 +7,7 @@ import ru.bookapp.model.Book;
 import ru.bookapp.service.AuthorService;
 import ru.bookapp.service.BookService;
 
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,7 @@ public class ConsoleApplication {
         System.out.println("=== Добро пожаловать в систему управления библиотекой ===");
         System.out.println("Доступные команды:");
         System.out.println("  add-book              - Добавить книгу");
+        System.out.println("  add-author            - Создать автора");
         System.out.println("  add-author-with-books - Создать автора с книгами");
         System.out.println("  find-author           - Найти автора по ID");
         System.out.println("  delete-author         - Удалить автора");
@@ -57,6 +59,9 @@ public class ConsoleApplication {
                 switch (input) {
                     case "add-book":
                         handleAddBook();
+                        break;
+                    case "add-author":
+                        handleAddAuthor();
                         break;
                     case "add-author-with-books":
                         handleAddAuthorWithBooks();
@@ -102,7 +107,7 @@ public class ConsoleApplication {
                     default:
                         System.out.println("Неизвестная команда: '" + input + "'");
                         System.out.println(
-                                "Доступные команды: add-book, add-author-with-books, find-author, delete-author, list-books, list-authors, find-books, transfer-book, exit");
+                                "Доступные команды: add-book, add-author, add-author-with-books, find-author, delete-author, list-books, list-authors, find-books, transfer-book, exit");
                 }
             } catch (Exception e) {
                 System.out.println("Ошибка: " + e.getMessage());
@@ -137,7 +142,7 @@ public class ConsoleApplication {
 
         try {
             int year = Integer.parseInt(yearInput);
-            if (year < 0 || year > 2026) {
+            if (year < 0 || year > Year.now().getValue()) {
                 System.out.println("Некорректный год!");
                 return;
             }
@@ -165,6 +170,28 @@ public class ConsoleApplication {
             System.out.println("\n=== Результаты поиска по '" + searchTerm + "' ===");
             books.forEach(System.out::println);
             System.out.println("Найдено книг: " + books.size());
+        }
+    }
+
+    private void handleAddAuthor() {
+        try {
+            System.out.print("Введите имя автора: ");
+            String authorName = scanner.nextLine().trim();
+            if (authorName.isEmpty()) {
+                System.out.println("Имя автора не может быть пустым!");
+                return;
+            }
+
+            System.out.print("Введите биографию автора (опционально): ");
+            String biography = scanner.nextLine().trim();
+            if (biography.isEmpty()) {
+                biography = null;
+            }
+            System.out.println("\nСоздание автора и книг...");
+            authorService.createAuthor(authorName, biography);
+            System.out.println("Автор успешно создан!");
+        } catch (Exception e) {
+            System.out.println("Ошибка при создании: " + e.getMessage());
         }
     }
 
