@@ -132,7 +132,7 @@ public class ConsoleApplication {
             return;
         }
         // Проверяем, существует ли уже автор
-        Optional<Author> author1 = authorService.findAuthorIdByName(author);
+        Optional<Author> author1 = authorService.findAuthorByName(author);
         if (author1.isEmpty()) {
             throw new IllegalArgumentException("Автор с именем '" + author + "' не существует");
         }

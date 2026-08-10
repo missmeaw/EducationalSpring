@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import javax.sql.DataSource;
 
 /**
- * todo Document type DataSourceConfig
+ * Настройки подключения к бд и транзакций - конфиги для приложения
  */
 @Configuration
 @ComponentScan(basePackages = "ru.bookapp")

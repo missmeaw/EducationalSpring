@@ -90,7 +90,7 @@ public class AuthorRepository {
         return count != null && count > 0;
     }
 
-    public Optional<Author> findAuthorIdByName(String name) {
+    public Optional<Author> findAuthorByName(String name) {
         String sql = "SELECT id, name, biography FROM authors WHERE name = ?";
         List<Author> authors = jdbcTemplate.query(sql, new AuthorRowMapper(), name);
         if (authors.isEmpty()) {
@@ -98,6 +98,11 @@ public class AuthorRepository {
         }
         Author author = authors.getFirst();
         return Optional.of(author);
+    }
+
+    public void deleteAll() {
+        String sql = "TRUNCATE authors CASCADE";
+        jdbcTemplate.update(sql);
     }
 
     private static class AuthorRowMapper implements RowMapper<Author> {

@@ -1,22 +1,63 @@
 plugins {
     id 'java'
+    id 'application'
 }
 
-group = 'org.example'
+group = 'ru.bookapp'
 version = '1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
 
 repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation 'org.springframework:spring-context:7.0.8'
-    implementation 'org.springframework:spring-jdbc:7.0.8'
-    implementation("org.postgresql:postgresql:42.7.11")
-    implementation 'org.slf4j:slf4j-simple:2.0.9'
+// Версии зависимостей
+ext {
+    springVersion = '7.0.8'
+    testcontainersVersion = '1.20.1'
+    junitJupiterVersion = '6.1.3'
+    mockitoVersion = '5.23.0'
+}
 
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
+dependencies {
+    // Spring Framework
+    implementation "org.springframework:spring-context:$springVersion"
+    implementation "org.springframework:spring-jdbc:$springVersion"
+    implementation "org.springframework:spring-tx:$springVersion"
+
+    // PostgreSQL Driver
+    implementation 'org.postgresql:postgresql:42.7.11'
+
+    // Test Dependencies
+    //    JUnit 5 (Jupiter)
+    testImplementation "org.junit.jupiter:junit-jupiter:$junitJupiterVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion"
+    testImplementation "org.junit.platform:junit-platform-launcher:1.10.1"
+
+    //    Spring Test
+    testImplementation "org.springframework:spring-test:$springVersion"
+
+    //    Mockito для JUnit 5
+    testImplementation "org.mockito:mockito-core:$mockitoVersion"
+    testImplementation "org.mockito:mockito-junit-jupiter:$mockitoVersion"
+
+    //    Testcontainers
+    testImplementation "org.testcontainers:testcontainers:$testcontainersVersion"
+    testImplementation "org.testcontainers:postgresql:$testcontainersVersion"
+    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+
+    // Дополнительные зависимости для Testcontainers
+    testImplementation "org.slf4j:slf4j-simple:2.0.9"
+
+}
+
+application {
+    mainClass = 'ru.bookapp.Main'
 }
 
 test {

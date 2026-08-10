@@ -89,7 +89,7 @@ public class AuthorService {
         return authors;
     }
 
-    public Optional<Author> findAuthorIdByName(String authorName) {
-        return authorRepository.findAuthorIdByName(authorName);
+    public Optional<Author> findAuthorByName(String authorName) {
+        return authorRepository.findAuthorByName(authorName);
     }
 }

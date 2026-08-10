@@ -117,6 +117,11 @@ public class BookRepository {
         return count != null && count > 0;
     }
 
+    public void deleteAll() {
+        String sql = "TRUNCATE books CASCADE";
+        jdbcTemplate.update(sql);
+    }
+
     private static class BookWithAuthorRowMapper implements RowMapper<Book> {
         @Override
         public Book mapRow(ResultSet rs, int rowNum) throws SQLException {

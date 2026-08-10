@@ -1,6 +1,7 @@
 package ru.bookapp.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.bookapp.model.Book;
@@ -13,6 +14,7 @@ import java.util.List;
  * Сервис добавления/изменения/чтения книг
  */
 @Service
+@DependsOn("authorService")
 public class BookService {
 
     private final BookRepository bookRepository;
