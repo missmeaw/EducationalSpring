@@ -8,8 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import ru.bookapp.config.AppConfig;
 import ru.bookapp.model.Author;
@@ -31,13 +29,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @Tag("integration")
 public class BookAppIntegrationTest {
 
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15.5")
-            .withDatabaseName("bookdb")
-            .withUsername("testuser")
-            .withPassword("testpass")
-            .withReuse(false);
-
     @Autowired
     private AuthorService authorService;
 
@@ -50,12 +41,8 @@ public class BookAppIntegrationTest {
     @BeforeEach
     void setUp() {
         // Очистка данных перед каждым тестом
-        try {
             bookRepository.deleteAll();
             authorRepository.deleteAll();
-        } catch (Exception e) {
-            // Игнорируем, если таблицы пустые
-        }
     }
 
     @Test
