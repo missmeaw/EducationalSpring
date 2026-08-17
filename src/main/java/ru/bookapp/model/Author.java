@@ -1,15 +1,26 @@
 package ru.bookapp.model;
 
+import jakarta.persistence.*;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Модель данных Автор
  */
+@Entity
+@Table(name = "authors")
 public class Author {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
+    @Column(name = "biography")
     private String biography;
-    private List<Book> books;
+    @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Book> books = new ArrayList<>();
 
     public Author() {
     }
@@ -56,6 +67,17 @@ public class Author {
 
     public void setBooks(List<Book> books) {
         this.books = books;
+    }
+
+    // Helper методы для управления связями
+    public void addBook(Book book) {
+        books.add(book);
+        book.setAuthor(this);
+    }
+
+    public void removeBook(Book book) {
+        books.remove(book);
+        book.setAuthor(null);
     }
 
     @Override

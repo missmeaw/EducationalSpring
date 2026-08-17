@@ -39,11 +39,14 @@ public class ConsoleApplication {
         System.out.println("  add-author            - Создать автора");
         System.out.println("  add-author-with-books - Создать автора с книгами");
         System.out.println("  find-author           - Найти автора по ID");
+        System.out.println("  find-author-books     - Найти автора с книгами");
         System.out.println("  delete-author         - Удалить автора");
         System.out.println("  list-authors          - Показать всех авторов");
         System.out.println("  list-books            - Показать все книги");
         System.out.println("  find-books            - Найти книги по названию");
+        System.out.println("  find-books-jpql       - Найти книги по названию и автору");
         System.out.println("  transfer-book         - Переместить книгу к другому автору");
+        System.out.println("  update-author         - Обновить биографию автора");
         System.out.println("  exit                  - Выход из программы");
         System.out.println("=".repeat(50));
 
@@ -69,36 +72,29 @@ public class ConsoleApplication {
                     case "find-author":
                         handleFindAuthor();
                         break;
+                    case "find-author-books":
+                        handleFindAuthorWithBooks();
+                        break;
                     case "delete-author":
                         handleDeleteAuthor();
                         break;
-                    case "list-books": {
-                        List<Book> books = bookService.listBooks();
-                        if (books.isEmpty()) {
-                            System.out.println("Библиотека пуста.");
-                        } else {
-                            System.out.println("\n=== Список книг ===");
-                            books.forEach(System.out::println);
-                            System.out.println("Всего книг: " + books.size());
-                        }
-                    }
-                    break;
-                    case "list-authors": {
-                        List<Author> authors = authorService.getAllAuthors();
-                        if (authors.isEmpty()) {
-                            System.out.println("Писателей не найдено.");
-                        } else {
-                            System.out.println("\n=== Список авторов ===");
-                            authors.forEach(System.out::println);
-                            System.out.println("Всего авторов: " + authors.size());
-                        }
-                    }
-                    break;
+                    case "list-books":
+                        handleListBooks();
+                        break;
+                    case "list-authors":
+                        handleListAuthors();
+                        break;
                     case "find-books":
                         handleFindBooks();
                         break;
+                    case "find-books-jpql":
+                        handleFindBooksJPQL();
+                        break;
                     case "transfer-book":
                         handleTransferBook();
+                        break;
+                    case "update-author":
+                        handleUpdateAuthor();
                         break;
                     case "exit":
                         System.out.println("До свидания!");
@@ -107,7 +103,9 @@ public class ConsoleApplication {
                     default:
                         System.out.println("Неизвестная команда: '" + input + "'");
                         System.out.println(
-                                "Доступные команды: add-book, add-author, add-author-with-books, find-author, delete-author, list-books, list-authors, find-books, transfer-book, exit");
+                                "Доступные команды: add-book, add-author, add-author-with-books," +
+                                        " find-author, find-author-books, delete-author, list-books, list-authors," +
+                                        " find-books, find-books-jpql, transfer-book, update-author, exit");
                 }
             } catch (Exception e) {
                 System.out.println("Ошибка: " + e.getMessage());
@@ -124,17 +122,18 @@ public class ConsoleApplication {
             return;
         }
 
-        System.out.print("Введите автора: ");
-        String author = scanner.nextLine().trim();
+        System.out.print("Введите имя автора: ");
+        String authorName = scanner.nextLine().trim();
 
-        if (author.isEmpty()) {
-            System.out.println("Автор не может быть пустым!");
+        if (authorName.isEmpty()) {
+            System.out.println("Имя автора не может быть пустым!");
             return;
         }
         // Проверяем, существует ли уже автор
-        Optional<Author> author1 = authorService.findAuthorByName(author);
-        if (author1.isEmpty()) {
-            throw new IllegalArgumentException("Автор с именем '" + author + "' не существует");
+        Optional<Author> authorOpt = authorService.findAuthorByName(authorName);
+        if (authorOpt.isEmpty()) {
+            System.out.println("Автор с именем '" + authorName + "' не существует. Сначала создайте автора.");
+            return;
         }
 
         System.out.print("Введите год издания: ");
@@ -143,11 +142,16 @@ public class ConsoleApplication {
         try {
             int year = Integer.parseInt(yearInput);
             if (year < 0 || year > Year.now().getValue()) {
-                System.out.println("Некорректный год!");
+                System.out.println("Некорректный год! Допустимый диапазон: 0 - " + Year.now().getValue());
                 return;
             }
-            bookService.addBook(new Book(title, year, author1.get().getId()));
-            System.out.println("Книга успешно добавлена!");
+
+            // Создаем книгу и устанавливаем связь с автором
+            Book book = new Book(title, year);
+            book.setAuthor(authorOpt.get());
+
+            bookService.addBook(book);
+            System.out.println("✅ Книга успешно добавлена!");
         } catch (NumberFormatException e) {
             System.out.println("Год должен быть числом!");
         }
@@ -173,6 +177,33 @@ public class ConsoleApplication {
         }
     }
 
+    private void handleFindBooksJPQL() {
+        System.out.print("Введите часть названия книги: ");
+        String titlePart = scanner.nextLine().trim();
+        if (titlePart.isEmpty()) {
+            System.out.println("Название не может быть пустым!");
+            return;
+        }
+
+        System.out.print("Введите имя автора: ");
+        String authorName = scanner.nextLine().trim();
+        if (authorName.isEmpty()) {
+            System.out.println("Имя автора не может быть пустым!");
+            return;
+        }
+
+        System.out.println("Поиск...");
+        List<Book> books = bookService.findBooksByTitleAndAuthor(titlePart, authorName);
+
+        if (books.isEmpty()) {
+            System.out.println("Книги по запросу (название: '" + titlePart + "', автор: '" + authorName + "') не найдены.");
+        } else {
+            System.out.println("\n=== Результаты поиска ===");
+            books.forEach(System.out::println);
+            System.out.println("Найдено книг: " + books.size());
+        }
+    }
+
     private void handleAddAuthor() {
         try {
             System.out.print("Введите имя автора: ");
@@ -187,9 +218,10 @@ public class ConsoleApplication {
             if (biography.isEmpty()) {
                 biography = null;
             }
-            System.out.println("\nСоздание автора и книг...");
-            authorService.createAuthor(authorName, biography);
-            System.out.println("Автор успешно создан!");
+
+            System.out.println("Создание автора и книг...");
+            Long authorId = authorService.createAuthor(authorName, biography);
+            System.out.println("✅ Автор успешно создан с ID: " + authorId);
         } catch (Exception e) {
             System.out.println("Ошибка при создании: " + e.getMessage());
         }
@@ -239,8 +271,8 @@ public class ConsoleApplication {
                 int year;
                 try {
                     year = Integer.parseInt(yearInput);
-                    if (year < 0 || year > 2026) {
-                        System.out.println("Некорректный год!");
+                    if (year < 0 || year > Year.now().getValue()) {
+                        System.out.println("Некорректный год! Допустимый диапазон: 0 - " + Year.now().getValue());
                         return;
                     }
                 } catch (NumberFormatException e) {
@@ -248,12 +280,12 @@ public class ConsoleApplication {
                     return;
                 }
 
-                books.add(new Book(title, year, null)); // authorId будет установлен позже
+                books.add(new Book(title, year));
             }
 
             System.out.println("\nСоздание автора и книг...");
             authorService.createAuthorWithBooks(authorName, biography, books);
-            System.out.println("Автор и книги успешно созданы!");
+            System.out.println("✅ Автор и книги успешно созданы!");
         } catch (Exception e) {
             System.out.println("Ошибка при создании: " + e.getMessage());
         }
@@ -265,11 +297,33 @@ public class ConsoleApplication {
 
         try {
             Long authorId = Long.parseLong(idInput);
+            System.out.println("Поиск автора...");
             Optional<Author> authorOpt = authorService.findAuthorById(authorId);
 
             if (authorOpt.isPresent()) {
                 Author author = authorOpt.get();
                 System.out.println("\n=== Найден автор ===");
+                System.out.println(author);
+            } else {
+                System.out.println("Автор с ID " + authorId + " не найден.");
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("ID должен быть числом!");
+        }
+    }
+
+    private void handleFindAuthorWithBooks() {
+        System.out.print("Введите ID автора: ");
+        String idInput = scanner.nextLine().trim();
+
+        try {
+            Long authorId = Long.parseLong(idInput);
+            System.out.println("Поиск автора с книгами...");
+            Optional<Author> authorOpt = authorService.findAuthorByIdWithBooks(authorId);
+
+            if (authorOpt.isPresent()) {
+                Author author = authorOpt.get();
+                System.out.println("\n=== Найден автор с книгами ===");
                 System.out.println(author);
             } else {
                 System.out.println("Автор с ID " + authorId + " не найден.");
@@ -286,7 +340,7 @@ public class ConsoleApplication {
         try {
             Long authorId = Long.parseLong(idInput);
             authorService.deleteAuthor(authorId);
-            System.out.println("Автор успешно удален!");
+            System.out.println("✅ Автор успешно удален!");
         } catch (NumberFormatException e) {
             System.out.println("ID должен быть числом!");
         } catch (IllegalStateException | IllegalArgumentException e) {
@@ -305,11 +359,63 @@ public class ConsoleApplication {
             Long authorId = Long.parseLong(authorIdInput);
 
             bookService.transferBook(bookId, authorId);
-            System.out.println("Книга успешно перенесена к новому автору!");
+            System.out.println("✅ Книга успешно перенесена к новому автору!");
         } catch (NumberFormatException e) {
             System.out.println("ID должен быть числом!");
         } catch (IllegalArgumentException e) {
             System.out.println("Ошибка: " + e.getMessage());
+        }
+    }
+
+    private void handleUpdateAuthor() {
+        try {
+            System.out.print("Введите ID автора для обновления: ");
+            String idInput = scanner.nextLine().trim();
+            Long authorId = Long.parseLong(idInput);
+
+            System.out.print("Введите новую биографию: ");
+            String newBiography = scanner.nextLine().trim();
+            if (newBiography.isEmpty()) {
+                System.out.println("Биография не может быть пустой!");
+                return;
+            }
+
+            System.out.println("Обновление...");
+            authorService.updateAuthorBiography(authorId, newBiography);
+            System.out.println("✅ Биография обновлена!");
+
+            // Показываем обновленного автора
+            Optional<Author> authorOpt = authorService.findAuthorById(authorId);
+            if (authorOpt.isPresent()) {
+                System.out.println("Обновленный автор: " + authorOpt.get().getName());
+                System.out.println("Новая биография: " + authorOpt.get().getBiography());
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("ID должен быть числом!");
+        } catch (Exception e) {
+            System.out.println("Ошибка: " + e.getMessage());
+        }
+    }
+
+    private void handleListBooks() {
+        List<Book> books = bookService.listBooks();
+        if (books.isEmpty()) {
+            System.out.println("Библиотека пуста.");
+        } else {
+            System.out.println("\n=== Список книг ===");
+            books.forEach(System.out::println);
+            System.out.println("Всего книг: " + books.size());
+        }
+    }
+
+    private void handleListAuthors() {
+        List<Author> authors = authorService.getAllAuthors();
+        if (authors.isEmpty()) {
+            System.out.println("Писателей не найдено.");
+        } else {
+            System.out.println("\n=== Список авторов ===");
+            authors.forEach(System.out::println);
+            System.out.println("Всего авторов: " + authors.size());
         }
     }
 }

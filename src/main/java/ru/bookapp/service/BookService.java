@@ -1,7 +1,6 @@
 package ru.bookapp.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.bookapp.model.Book;
@@ -14,7 +13,6 @@ import java.util.List;
  * Сервис добавления/изменения/чтения книг
  */
 @Service
-@DependsOn("authorService")
 public class BookService {
 
     private final BookRepository bookRepository;
@@ -24,30 +22,36 @@ public class BookService {
     public BookService(BookRepository bookRepository, AuthorRepository authorRepository) {
         this.bookRepository = bookRepository;
         this.authorRepository = authorRepository;
-        bookRepository.initTable();
     }
 
-    @Transactional
     public void addBook(Book book) {
-        bookRepository.addBook(book);
+        // Проверяем, есть ли автор
+        if (book.getAuthorId() != null && authorRepository.authorNotExists(book.getAuthorId())) {
+            throw new IllegalArgumentException("Автор с ID " + book.getAuthorId() + " не найден");
+        }
+        bookRepository.save(book);
     }
 
     public List<Book> listBooks() {
-        return bookRepository.findAllBooks();
+        return bookRepository.findAllWithAuthors();
     }
 
     public List<Book> findBooks(String searchTerm) {
-        return bookRepository.findBooksByTitle(searchTerm);
+        return bookRepository.findByTitleContainingIgnoreCase(searchTerm);
     }
 
     @Transactional
     public void transferBook(Long bookId, Long newAuthorId) {
-        if (!bookRepository.bookExists(bookId)) {
+        if (!bookRepository.existsById(bookId)) {
             throw new IllegalArgumentException("Книга с ID " + bookId + " не найдена");
         }
         if (authorRepository.authorNotExists(newAuthorId)) {
             throw new IllegalArgumentException("Автор с ID " + newAuthorId + " не найден");
         }
         bookRepository.updateBookAuthor(bookId, newAuthorId);
+    }
+
+    public List<Book> findBooksByTitleAndAuthor(String titlePart, String authorName) {
+        return bookRepository.findBooksByTitleAndAuthor(titlePart, authorName);
     }
 }

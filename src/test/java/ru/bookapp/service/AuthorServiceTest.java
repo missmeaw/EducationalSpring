@@ -1,15 +1,14 @@
 package ru.bookapp.service;
 
-import ru.bookapp.model.Author;
-import ru.bookapp.model.Book;
-import ru.bookapp.repository.AuthorRepository;
-import ru.bookapp.repository.BookRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import ru.bookapp.model.Author;
+import ru.bookapp.model.Book;
+import ru.bookapp.repository.AuthorRepository;
 
 import java.util.Arrays;
 import java.util.List;
@@ -17,17 +16,13 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class AuthorServiceTest {
+class AuthorServiceTest {
 
     @Mock
     private AuthorRepository authorRepository;
-
-    @Mock
-    private BookRepository bookRepository;
 
     @InjectMocks
     private AuthorService authorService;
@@ -41,165 +36,274 @@ public class AuthorServiceTest {
         testAuthor.setId(1L);
 
         testBooks = Arrays.asList(
-                new Book("Война и мир", 1869, 1L),
-                new Book("Анна Каренина", 1877, 1L)
+                new Book("Война и мир", 1869),
+                new Book("Анна Каренина", 1877)
         );
+    }
+
+    @Test
+    void createAuthor_Success() {
+        // Arrange
+        String authorName = "Лев Толстой";
+        String biography = "Русский писатель";
+        when(authorRepository.authorExistsByName(authorName)).thenReturn(false);
+        when(authorRepository.save(any(Author.class))).thenReturn(testAuthor);
+
+        // Act
+        Long authorId = authorService.createAuthor(authorName, biography);
+
+        // Assert
+        assertNotNull(authorId);
+        assertEquals(1L, authorId);
+        verify(authorRepository, times(1)).authorExistsByName(authorName);
+        verify(authorRepository, times(1)).save(any(Author.class));
+    }
+
+    @Test
+    void createAuthor_AlreadyExists_ThrowsException() {
+        // Arrange
+        String authorName = "Лев Толстой";
+        when(authorRepository.authorExistsByName(authorName)).thenReturn(true);
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> authorService.createAuthor(authorName, "Биография"));
+
+        assertEquals("Автор с именем 'Лев Толстой' уже существует", exception.getMessage());
+        verify(authorRepository, never()).save(any(Author.class));
     }
 
     @Test
     void createAuthorWithBooks_Success() {
         // Arrange
-        when(authorRepository.authorExistsByName("Лев Толстой")).thenReturn(false);
-        when(authorRepository.addAuthor(any(Author.class))).thenReturn(1L);
-        when(bookRepository.addBook(any(Book.class))).thenReturn(1L, 2L);
+        String authorName = "Лев Толстой";
+        String biography = "Русский писатель";
+        when(authorRepository.authorExistsByName(authorName)).thenReturn(false);
+        when(authorRepository.save(any(Author.class))).thenReturn(testAuthor);
 
         // Act
-        authorService.createAuthorWithBooks("Лев Толстой", "Русский писатель", testBooks);
+        authorService.createAuthorWithBooks(authorName, biography, testBooks);
 
         // Assert
-        verify(authorRepository, times(1)).authorExistsByName("Лев Толстой");
-        verify(authorRepository, times(1)).addAuthor(any(Author.class));
-        verify(bookRepository, times(2)).addBook(any(Book.class));
+        verify(authorRepository, times(1)).authorExistsByName(authorName);
+        verify(authorRepository, times(1)).save(any(Author.class));
+        // Проверяем, что у автора установлены книги
+        verify(authorRepository).save(argThat(author -> author.getBooks().size() == 2));
     }
 
     @Test
-    void createAuthorWithBooks_AuthorAlreadyExists_ThrowsException() {
+    void createAuthorWithBooks_AuthorExists_ThrowsException() {
         // Arrange
-        when(authorRepository.authorExistsByName("Лев Толстой")).thenReturn(true);
+        String authorName = "Лев Толстой";
+        when(authorRepository.authorExistsByName(authorName)).thenReturn(true);
 
         // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> authorService.createAuthorWithBooks("Лев Толстой", "Русский писатель", testBooks));
+                () -> authorService.createAuthorWithBooks(authorName, "Биография", testBooks));
 
         assertEquals("Автор с именем 'Лев Толстой' уже существует", exception.getMessage());
-        verify(authorRepository, never()).addAuthor(any(Author.class));
-        verify(bookRepository, never()).addBook(any(Book.class));
+        verify(authorRepository, never()).save(any(Author.class));
     }
 
     @Test
     void createAuthorWithBooks_ErrorBook_ThrowsExceptionAndRollback() {
         // Arrange
-        when(authorRepository.authorExistsByName("Тестовый Автор")).thenReturn(false);
-        when(authorRepository.addAuthor(any(Author.class))).thenReturn(1L);
-
-        // Создаем книги, где вторая называется "ERROR"
+        String authorName = "Тестовый Автор";
+        String biography = "Тестовая биография";
         List<Book> booksWithError = Arrays.asList(
-                new Book("Нормальная книга", 2000, 1L),
-                new Book("ERROR", 2001, 1L)
+                new Book("Нормальная книга", 2000),
+                new Book("ERROR", 2001)
         );
+        when(authorRepository.authorExistsByName(authorName)).thenReturn(false);
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> authorService.createAuthorWithBooks("Тестовый Автор", "Тест", booksWithError));
+                () -> authorService.createAuthorWithBooks(authorName, biography, booksWithError));
 
-        assertEquals("Тестовая ошибка при добавлении книги 'ERROR'", exception.getMessage());
-        verify(authorRepository, times(1)).addAuthor(any(Author.class));
-        verify(bookRepository, times(1)).addBook(any(Book.class)); // Только первая книга
+        assertTrue(exception.getMessage().contains("Тестовая ошибка"));
+        verify(authorRepository, never()).save(any(Author.class));
     }
 
     @Test
     void findAuthorById_Success() {
         // Arrange
-        when(authorRepository.findAuthorById(1L)).thenReturn(Optional.of(testAuthor));
-        when(bookRepository.findBooksByAuthorId(1L)).thenReturn(testBooks);
+        Long authorId = 1L;
+        when(authorRepository.findByIdWithBooks(authorId)).thenReturn(Optional.of(testAuthor));
 
         // Act
-        Optional<Author> result = authorService.findAuthorById(1L);
+        Optional<Author> result = authorService.findAuthorById(authorId);
 
         // Assert
         assertTrue(result.isPresent());
         assertEquals("Лев Толстой", result.get().getName());
-        assertEquals(2, result.get().getBooks().size());
-        verify(authorRepository, times(1)).findAuthorById(1L);
-        verify(bookRepository, times(1)).findBooksByAuthorId(1L);
+        verify(authorRepository, times(1)).findByIdWithBooks(authorId);
     }
 
     @Test
     void findAuthorById_NotFound_ReturnsEmpty() {
         // Arrange
-        when(authorRepository.findAuthorById(999L)).thenReturn(Optional.empty());
+        Long authorId = 999L;
+        when(authorRepository.findByIdWithBooks(authorId)).thenReturn(Optional.empty());
 
         // Act
-        Optional<Author> result = authorService.findAuthorById(999L);
+        Optional<Author> result = authorService.findAuthorById(authorId);
 
         // Assert
         assertFalse(result.isPresent());
-        verify(authorRepository, times(1)).findAuthorById(999L);
-        verify(bookRepository, never()).findBooksByAuthorId(anyLong());
+        verify(authorRepository, times(1)).findByIdWithBooks(authorId);
+    }
+
+    @Test
+    void findAuthorByIdWithBooks_Success() {
+        // Arrange
+        Long authorId = 1L;
+        when(authorRepository.findByIdWithBooks(authorId)).thenReturn(Optional.of(testAuthor));
+
+        // Act
+        Optional<Author> result = authorService.findAuthorByIdWithBooks(authorId);
+
+        // Assert
+        assertTrue(result.isPresent());
+        assertEquals("Лев Толстой", result.get().getName());
+        verify(authorRepository, times(1)).findByIdWithBooks(authorId);
+    }
+
+    @Test
+    void findAuthorLazy_Success() {
+        // Arrange
+        Long authorId = 1L;
+        when(authorRepository.findById(authorId)).thenReturn(Optional.of(testAuthor));
+
+        // Act
+        Optional<Author> result = authorService.findAuthorLazy(authorId);
+
+        // Assert
+        assertTrue(result.isPresent());
+        assertEquals("Лев Толстой", result.get().getName());
+        verify(authorRepository, times(1)).findById(authorId);
     }
 
     @Test
     void deleteAuthor_Success() {
         // Arrange
-        when(authorRepository.authorNotExists(1L)).thenReturn(false);
-        doNothing().when(authorRepository).deleteAuthor(1L);
+        Long authorId = 1L;
+        when(authorRepository.authorNotExists(authorId)).thenReturn(false);
+        when(authorRepository.findById(authorId)).thenReturn(Optional.of(testAuthor));
 
         // Act
-        authorService.deleteAuthor(1L);
+        authorService.deleteAuthor(authorId);
 
         // Assert
-        verify(authorRepository, times(1)).authorNotExists(1L);
-        verify(authorRepository, times(1)).deleteAuthor(1L);
+        verify(authorRepository, times(1)).authorNotExists(authorId);
+        verify(authorRepository, times(1)).findById(authorId);
+        verify(authorRepository, times(1)).delete(testAuthor);
     }
 
     @Test
     void deleteAuthor_NotFound_ThrowsException() {
         // Arrange
-        when(authorRepository.authorNotExists(999L)).thenReturn(true);
+        Long authorId = 999L;
+        when(authorRepository.authorNotExists(authorId)).thenReturn(true);
 
         // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> authorService.deleteAuthor(999L));
+                () -> authorService.deleteAuthor(authorId));
 
         assertEquals("Автор с ID 999 не найден", exception.getMessage());
-        verify(authorRepository, never()).deleteAuthor(anyLong());
+        verify(authorRepository, never()).delete(any(Author.class));
     }
 
     @Test
     void deleteAuthor_HasBooks_ThrowsException() {
         // Arrange
-        when(authorRepository.authorNotExists(1L)).thenReturn(false);
-        when(bookRepository.findBooksByAuthorId(1L)).thenReturn(testBooks);
+        Long authorId = 1L;
+        Author authorWithBooks = new Author("Тестовый автор", "Биография");
+        authorWithBooks.setId(1L);
+        authorWithBooks.setBooks(List.of(new Book("Книга 1", 2000)));
+
+        when(authorRepository.authorNotExists(authorId)).thenReturn(false);
+        when(authorRepository.findById(authorId)).thenReturn(Optional.of(authorWithBooks));
 
         // Act & Assert
         IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> authorService.deleteAuthor(1L));
+                () -> authorService.deleteAuthor(authorId));
 
-        assertEquals("Нельзя удалить автора, у которого есть книги. Сначала удалите все книги автора.", exception.getMessage());
-        verify(authorRepository, never()).deleteAuthor(anyLong());
+        assertTrue(exception.getMessage().contains("Нельзя удалить автора, у которого есть книги"));
+        verify(authorRepository, never()).delete(any(Author.class));
     }
 
     @Test
     void getAllAuthors_Success() {
         // Arrange
-        when(authorRepository.findAllAuthors()).thenReturn(List.of(testAuthor));
-        when(bookRepository.findBooksByAuthorId(1L)).thenReturn(testBooks);
+        List<Author> authors = Arrays.asList(testAuthor, new Author("Федор Достоевский", "Русский писатель"));
+        when(authorRepository.findAllWithBooks()).thenReturn(authors);
 
         // Act
         List<Author> result = authorService.getAllAuthors();
 
         // Assert
-        assertEquals(1, result.size());
-        assertEquals(testAuthor, result.getFirst());
-        assertEquals(2, result.getFirst().getBooks().size());
-        assertEquals(testBooks, result.getFirst().getBooks());
-        verify(authorRepository, times(1)).findAllAuthors();
-        verify(bookRepository, times(1)).findBooksByAuthorId(1L);
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        verify(authorRepository, times(1)).findAllWithBooks();
     }
 
     @Test
     void findAuthorByName_Success() {
-        String name = testAuthor.getName();
         // Arrange
-        when(authorRepository.findAuthorByName(name)).thenReturn(Optional.of(testAuthor));
+        String authorName = "Лев Толстой";
+        when(authorRepository.findByNameWithBooks(authorName)).thenReturn(Optional.of(testAuthor));
 
         // Act
-        Optional<Author> result = authorService.findAuthorByName(name);
+        Optional<Author> result = authorService.findAuthorByName(authorName);
 
         // Assert
         assertTrue(result.isPresent());
-        assertEquals("Лев Толстой", result.get().getName());
-        assertNull(result.get().getBooks());
-        verify(authorRepository, times(1)).findAuthorByName(name);
+        assertEquals(authorName, result.get().getName());
+        verify(authorRepository, times(1)).findByNameWithBooks(authorName);
+    }
+
+    @Test
+    void findAuthorByName_NotFound_ReturnsEmpty() {
+        // Arrange
+        String authorName = "Неизвестный автор";
+        when(authorRepository.findByNameWithBooks(authorName)).thenReturn(Optional.empty());
+
+        // Act
+        Optional<Author> result = authorService.findAuthorByName(authorName);
+
+        // Assert
+        assertFalse(result.isPresent());
+        verify(authorRepository, times(1)).findByNameWithBooks(authorName);
+    }
+
+    @Test
+    void updateAuthorBiography_Success() {
+        // Arrange
+        Long authorId = 1L;
+        String newBiography = "Новая биография";
+        when(authorRepository.findById(authorId)).thenReturn(Optional.of(testAuthor));
+
+        // Act
+        authorService.updateAuthorBiography(authorId, newBiography);
+
+        // Assert
+        assertEquals(newBiography, testAuthor.getBiography());
+        verify(authorRepository, times(1)).findById(authorId);
+        // save не вызывается - dirty checking
+        verify(authorRepository, never()).save(any(Author.class));
+    }
+
+    @Test
+    void updateAuthorBiography_AuthorNotFound_ThrowsException() {
+        // Arrange
+        Long authorId = 999L;
+        when(authorRepository.findById(authorId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> authorService.updateAuthorBiography(authorId, "Новая биография"));
+
+        assertEquals("Автор с ID 999 не найден", exception.getMessage());
+        verify(authorRepository, never()).save(any(Author.class));
     }
 }

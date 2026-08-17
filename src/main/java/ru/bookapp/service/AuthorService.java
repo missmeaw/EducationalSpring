@@ -6,7 +6,6 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.bookapp.model.Author;
 import ru.bookapp.model.Book;
 import ru.bookapp.repository.AuthorRepository;
-import ru.bookapp.repository.BookRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,78 +17,84 @@ import java.util.Optional;
 public class AuthorService {
 
     private final AuthorRepository authorRepository;
-    private final BookRepository bookRepository;
 
     @Autowired
-    public AuthorService(AuthorRepository authorRepository, BookRepository bookRepository) {
+    public AuthorService(AuthorRepository authorRepository) {
         this.authorRepository = authorRepository;
-        this.bookRepository = bookRepository;
-        authorRepository.initTable();
     }
 
     public Long createAuthor(String authorName, String biography) {
-        // Проверяем, существует ли уже автор
         if (authorRepository.authorExistsByName(authorName)) {
             throw new IllegalArgumentException("Автор с именем '" + authorName + "' уже существует");
         }
 
-        // Создаем автора
         Author author = new Author(authorName, biography);
-        return authorRepository.addAuthor(author);
-
+        Author saved = authorRepository.save(author);
+        return saved.getId();
     }
 
     @Transactional
     public void createAuthorWithBooks(String authorName, String biography, List<Book> books) {
-        Long authorId = createAuthor(authorName, biography);
+        if (authorRepository.authorExistsByName(authorName)) {
+            throw new IllegalArgumentException("Автор с именем '" + authorName + "' уже существует");
+        }
 
-        // Добавляем все книги
+        Author author = new Author(authorName, biography);
+
         for (Book book : books) {
-            book.setAuthorId(authorId);
-
-            // Для проверки rollback - если книга называется "ERROR", выбрасываем исключение
             if ("ERROR".equalsIgnoreCase(book.getTitle())) {
                 throw new RuntimeException("Тестовая ошибка при добавлении книги '" + book.getTitle() + "'");
             }
-
-            bookRepository.addBook(book);
+            author.addBook(book);
         }
+
+        authorRepository.save(author);
+        System.out.println("✅ Автор и книги сохранены. ID автора: " + author.getId());
     }
 
     public Optional<Author> findAuthorById(Long id) {
-        Optional<Author> author = authorRepository.findAuthorById(id);
-
-        // Загружаем книги автора
-        if (author.isPresent()) {
-            List<Book> books = bookRepository.findBooksByAuthorId(id);
-            author.get().setBooks(books);
-        }
-
-        return author;
+        return authorRepository.findByIdWithBooks(id);
     }
 
+    public Optional<Author> findAuthorByIdWithBooks(Long id) {
+        return authorRepository.findByIdWithBooks(id);
+    }
+
+    public Optional<Author> findAuthorLazy(Long id) {
+        return authorRepository.findById(id);
+    }
+
+    @Transactional
     public void deleteAuthor(Long authorId) {
         if (authorRepository.authorNotExists(authorId)) {
             throw new IllegalArgumentException("Автор с ID " + authorId + " не найден");
         }
-        List<Book> books = bookRepository.findBooksByAuthorId(authorId);
-        if (!books.isEmpty()) {
-            throw new IllegalStateException("Нельзя удалить автора, у которого есть книги. Сначала удалите все книги автора.");
+
+        Optional<Author> authorOpt = authorRepository.findById(authorId);
+        if (authorOpt.isPresent()) {
+            Author author = authorOpt.get();
+            if (!author.getBooks().isEmpty()) {
+                throw new IllegalStateException("Нельзя удалить автора, у которого есть книги. Сначала удалите все книги автора.");
+            }
+            authorRepository.delete(author);
         }
-        authorRepository.deleteAuthor(authorId);
     }
 
     public List<Author> getAllAuthors() {
-        List<Author> authors = authorRepository.findAllAuthors();
-        for (Author author : authors) {
-            // Загружаем книги автора
-            List<Book> books = bookRepository.findBooksByAuthorId(author.getId());
-            author.setBooks(books);
-        }
-        return authors;
+        return authorRepository.findAllWithBooks();
     }
 
     public Optional<Author> findAuthorByName(String authorName) {
-        return authorRepository.findAuthorByName(authorName);
+        return authorRepository.findByNameWithBooks(authorName);
+    }
+
+    public void updateAuthorBiography(Long authorId, String newBiography) {
+        Optional<Author> authorOpt = authorRepository.findById(authorId);
+        if (authorOpt.isPresent()) {
+            Author author = authorOpt.get();
+            author.setBiography(newBiography);
+        } else {
+            throw new IllegalArgumentException("Автор с ID " + authorId + " не найден");
+        }
     }
 }

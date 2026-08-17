@@ -1,46 +1,46 @@
 package ru.bookapp.model;
 
+import jakarta.persistence.*;
+
 /**
  * Модель данных Книга
  */
 
-
+@Entity
+@Table(name = "books")
 public class Book {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @Column(name = "title", nullable = false)
+    private String title;
+    @Column(name = "year")
+    private int year;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id")
+    private Author author;
 
     public Book() {
     }
 
-    public Book(String title, String author, int year) {
+    public Book(String title, int year) {
         this.title = title;
+        this.year = year;
+    }
+
+    public Book(String title, int year, Author author) {
+        this.title = title;
+        this.year = year;
         this.author = author;
-        this.year = year;
     }
 
-    public Book(String title, int year, Long authorId) {
-        this.title = title;
-        this.year = year;
-        this.authorId = authorId;
-    }
-
-    public Book(Long id, String title, int year, Long authorId) {
+    public Book(Long id, String title, int year, Author author) {
         this.id = id;
         this.title = title;
         this.year = year;
-        this.authorId = authorId;
-    }
-
-    public Book(Long id, String title, String author, int year) {
-        this.id = id;
-        this.title = title;
         this.author = author;
-        this.year = year;
     }
-
-    private Long id;
-    private String title;
-    private String author;
-    private int year;
-    private Long authorId;
 
     // Геттеры и сеттеры
     public Long getId() {
@@ -59,14 +59,6 @@ public class Book {
         this.title = title;
     }
 
-    public String getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(String author) {
-        this.author = author;
-    }
-
     public int getYear() {
         return year;
     }
@@ -75,16 +67,29 @@ public class Book {
         this.year = year;
     }
 
+    public Author getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(Author author) {
+        this.author = author;
+    }
+
     public Long getAuthorId() {
-        return authorId;
+        return author != null ? author.getId() : null;
     }
 
     public void setAuthorId(Long authorId) {
-        this.authorId = authorId;
+        if (authorId != null) {
+            Author author = new Author();
+            author.setId(authorId);
+            this.author = author;
+        }
     }
 
     @Override
-        public String toString() {
-            return String.format("ID: %d | %s by %s (%d)", id, title, author, year);
-        }
+    public String toString() {
+        return String.format("ID: %d | %s %s г. %s",
+                id, title, year, author.getName());
+    }
 }
